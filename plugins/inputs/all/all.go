@@ -4,6 +4,7 @@ import (
 	//Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/inputs/activemq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/aerospike"
+	_ "github.com/influxdata/telegraf/plugins/inputs/airthings"
 	_ "github.com/influxdata/telegraf/plugins/inputs/aliyuncms"
 	_ "github.com/influxdata/telegraf/plugins/inputs/amd_rocm_smi"
 	_ "github.com/influxdata/telegraf/plugins/inputs/amqp_consumer"
