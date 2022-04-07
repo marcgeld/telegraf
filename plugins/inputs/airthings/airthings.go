@@ -52,10 +52,10 @@ type DeviceMeasurement struct {
 */
 
 const (
-	SerialNumber       string = "{:serialNumber}"
-	PathDevices        string = "/devices"
-	PathLatestSamples  string = "/devices/" + SerialNumber + "/latest-samples"
-	PathDevicesDetails string = "/devices/" + SerialNumber
+	SerialNumber       = "{:serialNumber}"
+	PathDevices        = "/devices"
+	PathLatestSamples  = "/devices/" + SerialNumber + "/latest-samples"
+	PathDevicesDetails = "/devices/" + SerialNumber
 )
 
 var sampleConfig = `
@@ -139,15 +139,32 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-
 	for _, device := range deviceList.Devices {
-		pathLS := strings.Replace(PathLatestSamples, SerialNumber, device.Id, 1)
-		fmt.Printf("--> %s\n", pathLS)
-
-		err2 := m.extractLatestSample(acc, pathLS)
-		if err2 != nil {
-			return err2
+		sample, err := m.devSample(device.Id)
+		if err != nil {
+			return err
 		}
+		fmt.Printf("--> sample: %v\n", sample)
+
+		details, err := m.devDetails(device.Id)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("--> details: %v\n", details)
+
+		/*
+			if len(sample) != 0 {
+				var ts time.Time
+				tsVal, ok := m["time"].(float64)
+				if ok {
+					tm := time.Unix(int64(tsVal), 0)
+					fmt.Println(tm)
+					delete(m, "time")
+				}
+				acc.AddFields("airthings", m, nil, ts)
+			}
+
+		*/
 	}
 	/*
 		// add tomcat_jvm_memory measurements
@@ -161,32 +178,42 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *Airthings) extractLatestSample(acc telegraf.Accumulator, pathLS string) error {
+func (m *Airthings) devSample(deviceId string) (*map[string]interface{}, error) {
 	// LatestSamples
-	bodyStr, err := m.httpRequest(pathLS)
+	url := strings.Replace(PathLatestSamples, SerialNumber, deviceId, 1)
+	bstr, err := m.httpRequest(url)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	var objmap map[string]json.RawMessage
-	err = json.Unmarshal([]byte(bodyStr), &objmap)
+	err = json.Unmarshal(bstr, &objmap)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	if dataVal, ok := objmap["data"]; ok {
 		var data map[string]interface{}
 		err = json.Unmarshal(dataVal, &data)
 		if err != nil {
-			return err
+			return nil, err
 		}
-
-		if len(data) != 0 {
-			fmt.Printf("--> %v\n", data)
-			acc.AddFields("device", data, nil)
-		}
+		return &data, nil
 	}
-	return nil
+	return nil, fmt.Errorf("No key 'data' in json data from sensor %s", deviceId)
+}
+
+func (m *Airthings) devDetails(deviceId string) (*map[string]interface{}, error) {
+	url := strings.Replace(PathDevicesDetails, SerialNumber, deviceId, 1)
+	bstr, err := m.httpRequest(url)
+	if err != nil {
+		return nil, err
+	}
+
+	var objmap map[string]interface{}
+	err = json.Unmarshal(bstr, &objmap)
+	if err != nil {
+		return nil, err
+	}
+	return &objmap, nil
 }
 
 func (m *Airthings) deviceList() (DeviceList, error) {

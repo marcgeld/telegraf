@@ -1,6 +1,6 @@
 module github.com/telegraf/plugins/inputs/airthings
 
-go 1.18
+go 1.17
 
 require (
 	github.com/influxdata/telegraf v1.22.0

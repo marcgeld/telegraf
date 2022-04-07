@@ -3,7 +3,15 @@
 The [Airthings](https://www.airthings.com) plugin collects data from Airthings devices via the Airthings API.
 See the [Airthings API](https://developer.airthings.com/docs/api-getting-started/index.html) for details.
 
+## Airthings for Consumers
+A consumer can create 1 Airthings API-client, with Client Credentials Grant authorization.
+The client can be used to fetch air quality data uploaded by the customer's own device.
+The API is limited to 120 requests per hour
+
+
 ## Airthings for Business
+*<sup>(Not implemented)</sup>*
+
 Airthings For Business Client is by default allowed 5000 requests per hour.
 Users signed in through the same client all share that same quota. 
 The current rate limit status is indicated in the response headers:
@@ -16,10 +24,6 @@ X-RateLimit-Limit: 5000 // The maximum number of requests you're granted per hou
 X-RateLimit-Retry-After: 100 // A new request can be performed after this many seconds.
 ```
 
-## Airthings for Consumers
-A consumer can create 1 Airthings API-client, with Client Credentials Grant authorization. 
-The client can be used to fetch air quality data uploaded by the customer's own device. 
-The API is limited to 120 requests per hour
 
 
 ## Configuration

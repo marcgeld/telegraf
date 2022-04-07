@@ -2,9 +2,6 @@ package airthings
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +10,16 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	HttpContentTypeKey  = "Content-Type"
+	HttpContentTypeForm = "application/x-www-form-urlencoded"
+	HttpContentTypeJson = "application/json"
 )
 
 func readTestData(testdataFilename string) string {
@@ -26,27 +33,27 @@ func readTestData(testdataFilename string) string {
 // Test get mock data from device
 func TestGetDeviceListAndData(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "POST" && r.URL.Path == "/v1/token" {
-			w.Header().Set("Content-Type", "application/x-www-form-urlencoded")
+		if r.Method == http.MethodPost && r.URL.Path == "/v1/token" {
+			w.Header().Set(HttpContentTypeKey, HttpContentTypeForm)
 			_, err := fmt.Fprint(w, "access_token=acc35570d3n&scope=user&token_type=bearer")
 			require.NoError(t, err)
-		} else if r.Method == "GET" && strings.HasSuffix(r.URL.Path, PathDevices) {
-			w.Header().Set("Content-Type", "application/json")
+		} else if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, PathDevices) {
+			w.Header().Set(HttpContentTypeKey, HttpContentTypeJson)
 			_, err := fmt.Fprint(w, readTestData("testdata/device_list.json"))
 			require.NoError(t, err)
-		} else if r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/latest-samples") {
+		} else if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/latest-samples") {
 			_, serialNumber := path.Split(path.Dir(r.URL.Path))
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(HttpContentTypeKey, HttpContentTypeJson)
 			_, err := fmt.Fprint(w, readTestData("testdata/sample_"+serialNumber+".json"))
 			require.NoError(t, err)
-		} else if r.Method == "GET" && func(matched bool, err error) bool {
+		} else if r.Method == http.MethodGet && func(matched bool, err error) bool {
 			if err != nil {
 				return matched
 			}
 			return false
 		}(regexp.MatchString(`^/devices/\d+$`, "aaxbb")) {
 			_, serialNumber := path.Split(path.Dir(r.URL.Path))
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(HttpContentTypeKey, HttpContentTypeJson)
 			_, err := fmt.Fprint(w, readTestData("testdata/sample_"+serialNumber+".json"))
 			require.NoError(t, err)
 		} else {
