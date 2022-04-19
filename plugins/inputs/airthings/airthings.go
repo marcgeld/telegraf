@@ -148,55 +148,31 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("--> sample: %v\n\n", sample)
+		for k, v := range *sample {
+			air[k] = v
+		}
 
 		details, err := m.devDetails(device.Id)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("--> details: %v\n\n", details)
-
-		for k, v := range *sample {
-			//fmt.Printf("--> values: %s, %v \n", k, v)
+		for k, v := range *details {
 			air[k] = v
 		}
-		fmt.Printf("\n")
 
-		/*
-			if rec, ok := sample.(map[string]interface{}); ok {
-				for key, value := range rec {
-					air[key] = value
-				}
-			} else {
-				fmt.Printf("record not a map[string]interface{}: %v\n", record)
-			}
-
-			details, err := m.devDetails(device.Id)
-			if err != nil {
-				return err
-			}
-			if rec, ok := details.(map[string]interface{}); ok {
-				for key, value := range rec {
-					air[key] = value
-				}
-			} else {
-				fmt.Printf("record not a map[string]interface{}: %v\n", record)
-			}
-			//fmt.Printf("--> details: %v\n", details)
-		*/
-		/*
-			if len(sample) != 0 {
-				var ts time.Time
-				tsVal, ok := m["time"].(float64)
-				if ok {
-					tm := time.Unix(int64(tsVal), 0)
-					fmt.Println(tm)
-					delete(m, "time")
-				}
-				acc.AddFields("airthings", m, nil, ts)
+		if len(air) != 0 {
+			var ts time.Time
+			tsVal, ok := air["time"].(float64)
+			if ok {
+				tm := time.Unix(int64(tsVal), 0)
+				fmt.Println(tm)
+				delete(air, "time")
 			}
 
-		*/
+			fmt.Printf("--> air: %v\n", air)
+
+			acc.AddFields("airthings", air, nil, ts)
+		}
 	}
 	/*
 		// add tomcat_jvm_memory measurements
@@ -319,7 +295,7 @@ func init() {
 			ClientId:     "dummyId",
 			ClientSecret: "dummySecret",
 			TokenUrl:     "https://accounts-api.airthings.com/v1/token",
-			Scopes:       []string{"read:device"},
+			Scopes:       []string{"read:device:current_values"},
 			Timeout:      config.Duration(5 * time.Second),
 		}
 	})
