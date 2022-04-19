@@ -32,7 +32,18 @@ func readTestData(testdataFilename string) string {
 
 // Test get mock data from device
 func TestGetDeviceListAndData(t *testing.T) {
+	rexp := regexp.MustCompile(`^/devices/([0-9]*)`)
+
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		var deviceId = func() string {
+			devIdTmp := rexp.FindStringSubmatch(r.URL.Path)
+			if devIdTmp != nil && len(devIdTmp) > 1 {
+				return devIdTmp[1]
+			}
+			return ""
+		}()
+
 		if r.Method == http.MethodPost && r.URL.Path == "/v1/token" {
 			w.Header().Set(HttpContentTypeKey, HttpContentTypeForm)
 			_, err := fmt.Fprint(w, "access_token=acc35570d3n&scope=user&token_type=bearer")
@@ -46,18 +57,12 @@ func TestGetDeviceListAndData(t *testing.T) {
 			w.Header().Set(HttpContentTypeKey, HttpContentTypeJson)
 			_, err := fmt.Fprint(w, readTestData("testdata/sample_"+serialNumber+".json"))
 			require.NoError(t, err)
-		} else if r.Method == http.MethodGet && func(matched bool, err error) bool {
-			if err != nil {
-				return matched
-			}
-			return false
-		}(regexp.MatchString(`^/devices/\d+$`, "aaxbb")) {
-			_, serialNumber := path.Split(path.Dir(r.URL.Path))
+		} else if r.Method == http.MethodGet && len(deviceId) > 0 {
 			w.Header().Set(HttpContentTypeKey, HttpContentTypeJson)
-			_, err := fmt.Fprint(w, readTestData("testdata/sample_"+serialNumber+".json"))
+			_, err := fmt.Fprint(w, readTestData("testdata/device_"+deviceId+".json"))
 			require.NoError(t, err)
 		} else {
-			fmt.Printf("--> %v", r)
+			fmt.Printf("request --> %v", r)
 			_, err := fmt.Fprintln(w, readTestData("testdata/error.json"))
 			require.NoError(t, err)
 		}

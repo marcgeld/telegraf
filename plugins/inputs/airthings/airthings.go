@@ -140,18 +140,50 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	for _, device := range deviceList.Devices {
+		air := map[string]interface{}{
+			"device": device,
+		}
+
 		sample, err := m.devSample(device.Id)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("--> sample: %v\n", sample)
+		fmt.Printf("--> sample: %v\n\n", sample)
 
 		details, err := m.devDetails(device.Id)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("--> details: %v\n", details)
+		fmt.Printf("--> details: %v\n\n", details)
 
+		for k, v := range *sample {
+			//fmt.Printf("--> values: %s, %v \n", k, v)
+			air[k] = v
+		}
+		fmt.Printf("\n")
+
+		/*
+			if rec, ok := sample.(map[string]interface{}); ok {
+				for key, value := range rec {
+					air[key] = value
+				}
+			} else {
+				fmt.Printf("record not a map[string]interface{}: %v\n", record)
+			}
+
+			details, err := m.devDetails(device.Id)
+			if err != nil {
+				return err
+			}
+			if rec, ok := details.(map[string]interface{}); ok {
+				for key, value := range rec {
+					air[key] = value
+				}
+			} else {
+				fmt.Printf("record not a map[string]interface{}: %v\n", record)
+			}
+			//fmt.Printf("--> details: %v\n", details)
+		*/
 		/*
 			if len(sample) != 0 {
 				var ts time.Time
