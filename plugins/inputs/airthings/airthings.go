@@ -36,21 +36,6 @@ type DeviceList struct {
 	} `json:"devices"`
 }
 
-/*
-type DeviceMeasurement struct {
-	Data struct {
-		Battery         int     `json:"battery"`
-		Humidity        float64 `json:"humidity"`
-		Mold            float64 `json:"mold"`
-		Rssi            int     `json:"rssi"`
-		Temp            float64 `json:"temp"`
-		Time            int     `json:"time"`
-		Voc             float64 `json:"voc"`
-		RelayDeviceType string  `json:"relayDeviceType"`
-	} `json:"data"`
-}
-*/
-
 const (
 	SerialNumber       = "{:serialNumber}"
 	PathDevices        = "/devices"
@@ -135,21 +120,46 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 		m.client = client
 	}
 
+	/*
+		func SumIntsOrFloats[K comparable, V int64 | float64](m map[K]V) V {
+		var s V
+		for _, v := range m {
+		s += v
+		}
+		return s
+		}
+	*/
+
 	deviceList, err := m.deviceList()
 	if err != nil {
 		return err
 	}
 	for _, device := range deviceList.Devices {
-		air := map[string]interface{}{
-			"device": device,
+
+		var ts time.Time = time.Now()
+		var air = map[string]interface{}{}
+		var airTags = map[string]string{
+			"id":              device.Id,
+			"deviceType":      device.DeviceType,
+			"segment.id":      device.Segment.Id,
+			"segment.name":    device.Segment.Name,
+			"segment.active":  strconv.FormatBool(device.Segment.Active),
+			"segment.started": device.Segment.Started,
 		}
 
 		sample, err := m.devSample(device.Id)
 		if err != nil {
 			return err
 		}
+
 		for k, v := range *sample {
-			air[k] = v
+			switch k {
+			case "time":
+				// Get the time of the sample
+				ts = time.Unix(int64(v.(float64)), 0)
+			default:
+				air["sample."+k] = v
+			}
 		}
 
 		details, err := m.devDetails(device.Id)
@@ -157,32 +167,25 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		for k, v := range *details {
-			air[k] = v
-		}
+			switch k {
+			case "id":
+			case "deviceType":
+			case "location":
+			case "segment":
+			case "sensors":
 
-		if len(air) != 0 {
-			var ts time.Time
-			tsVal, ok := air["time"].(float64)
-			if ok {
-				tm := time.Unix(int64(tsVal), 0)
-				fmt.Println(tm)
-				delete(air, "time")
+			default:
+				air[k] = v
 			}
-
-			fmt.Printf("--> air: %v\n", air)
-
-			acc.AddFields("airthings", air, nil, ts)
 		}
+
+		fmt.Printf("--> air: %v\n", air)
+		fmt.Printf("--> airTags: %v\n", airTags)
+		fmt.Printf("--> time: %v\n\n", ts)
+
+		acc.AddFields("airthings", air, airTags, ts)
+
 	}
-	/*
-		// add tomcat_jvm_memory measurements
-		tcm := map[string]interface{}{
-			"free":  status.TomcatJvm.JvmMemory.Free,
-			"total": status.TomcatJvm.JvmMemory.Total,
-			"max":   status.TomcatJvm.JvmMemory.Max,
-		}
-		acc.AddFields("tomcat_jvm_memory", tcm, nil)
-	*/
 	return nil
 }
 
