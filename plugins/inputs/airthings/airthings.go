@@ -120,16 +120,6 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 		m.client = client
 	}
 
-	/*
-		func SumIntsOrFloats[K comparable, V int64 | float64](m map[K]V) V {
-		var s V
-		for _, v := range m {
-		s += v
-		}
-		return s
-		}
-	*/
-
 	deviceList, err := m.deviceList()
 	if err != nil {
 		return err
@@ -139,6 +129,7 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 		var ts time.Time = time.Now()
 		var air = map[string]interface{}{}
 		var airTags = map[string]string{
+			"name":            "airthings",
 			"id":              device.Id,
 			"deviceType":      device.DeviceType,
 			"segment.id":      device.Segment.Id,
@@ -173,17 +164,16 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 			case "location":
 			case "segment":
 			case "sensors":
-
 			default:
 				air[k] = v
 			}
 		}
 
-		fmt.Printf("--> air: %v\n", air)
-		fmt.Printf("--> airTags: %v\n", airTags)
-		fmt.Printf("--> time: %v\n\n", ts)
+		//fmt.Printf("--> air: %v\n", air)
+		//fmt.Printf("--> airTags: %v\n", airTags)
+		//fmt.Printf("--> time: %v\n\n", ts)
 
-		acc.AddFields("airthings", air, airTags, ts)
+		acc.AddFields("airthings_connector", air, airTags, ts)
 
 	}
 	return nil
@@ -286,7 +276,6 @@ func (m *Airthings) createHTTPClient() (*http.Client, error) {
 		},
 		Timeout: time.Duration(m.Timeout),
 	}
-
 	return client, nil
 }
 
