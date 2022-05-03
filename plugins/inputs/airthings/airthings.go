@@ -108,29 +108,15 @@ func (m *Airthings) Description() string {
 }
 
 func (m *Airthings) Gather(acc telegraf.Accumulator) error {
-	if m.cfg == nil {
-		m.cfg = &clientcredentials.Config{
-			ClientID:     m.ClientId,
-			ClientSecret: m.ClientSecret,
-			TokenURL:     m.TokenUrl,
-			Scopes:       m.Scopes,
-		}
-	}
 
-	if m.oAuthAccessToken == nil {
-		var err error
-		m.oAuthAccessToken, err = m.cfg.Token(context.Background())
-		if err != nil {
-			return err
-		}
+	m.setupConfig()
+	err := m.setupAccessToken()
+	if err != nil {
+		return err
 	}
-
-	if m.client == nil {
-		client, err := m.createHTTPClient()
-		if err != nil {
-			return err
-		}
-		m.client = client
+	err = m.setupHttpClient()
+	if err != nil {
+		return err
 	}
 
 	deviceList, err := m.deviceList()
@@ -139,8 +125,6 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 	}
 	for _, device := range deviceList.Devices {
 
-		var ts = time.Now()
-		var air = map[string]interface{}{}
 		var airTags = map[string]string{
 			TagName:           "airthings",
 			TagId:             device.Id,
@@ -151,22 +135,13 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 			TagSegmentStarted: device.Segment.Started,
 		}
 
-		sample, err := m.devSample(device.Id)
+		var ts = time.Now()
+		air, ts, err := m.deviceSamples(device.Id)
 		if err != nil {
 			return err
 		}
 
-		for k, v := range *sample {
-			switch k {
-			case "time":
-				// Get the time of the sample
-				ts = time.Unix(int64(v.(float64)), 0)
-			default:
-				air[k] = v
-			}
-		}
-
-		details, err := m.devDetails(device.Id)
+		details, err := m.deviceDetails(device.Id)
 		if err != nil {
 			return err
 		}
@@ -190,30 +165,76 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *Airthings) devSample(deviceId string) (*map[string]interface{}, error) {
+func (m *Airthings) setupHttpClient() error {
+	if m.client == nil {
+		client, err := m.createHTTPClient()
+		if err != nil {
+			return err
+		}
+		m.client = client
+	}
+	return nil
+}
+
+func (m *Airthings) setupAccessToken() error {
+	if m.oAuthAccessToken == nil {
+		var err error
+		m.oAuthAccessToken, err = m.cfg.Token(context.Background())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *Airthings) setupConfig() {
+	if m.cfg == nil {
+		m.cfg = &clientcredentials.Config{
+			ClientID:     m.ClientId,
+			ClientSecret: m.ClientSecret,
+			TokenURL:     m.TokenUrl,
+			Scopes:       m.Scopes,
+		}
+	}
+}
+
+func (m *Airthings) deviceSamples(deviceId string) (map[string]interface{}, time.Time, error) {
 	// LatestSamples
+	var ts = time.Now()
 	url := strings.Replace(PathLatestSamples, SerialNumber, deviceId, 1)
 	bstr, err := m.httpRequest(url)
 	if err != nil {
-		return nil, err
+		return nil, ts, err
 	}
 	var objmap map[string]json.RawMessage
 	err = json.Unmarshal(bstr, &objmap)
 	if err != nil {
-		return nil, err
+		return nil, ts, err
 	}
 	if dataVal, ok := objmap["data"]; ok {
 		var data map[string]interface{}
 		err = json.Unmarshal(dataVal, &data)
 		if err != nil {
-			return nil, err
+			return nil, ts, err
 		}
-		return &data, nil
+
+		var air = map[string]interface{}{}
+		for k, v := range data {
+			switch k {
+			case "time":
+				// Get the time of the sample
+				ts = time.Unix(int64(v.(float64)), 0)
+			default:
+				air[k] = v
+			}
+		}
+
+		return air, ts, nil
 	}
-	return nil, fmt.Errorf("No key 'data' in json data from sensor %s", deviceId)
+	return nil, ts, fmt.Errorf("No key 'data' in json data from sensor %s", deviceId)
 }
 
-func (m *Airthings) devDetails(deviceId string) (*map[string]interface{}, error) {
+func (m *Airthings) deviceDetails(deviceId string) (*map[string]interface{}, error) {
 	url := strings.Replace(PathDevicesDetails, SerialNumber, deviceId, 1)
 	bstr, err := m.httpRequest(url)
 	if err != nil {
