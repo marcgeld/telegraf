@@ -31,14 +31,6 @@ const (
 	MesRadonShortTermAvg = "radonShortTermAvg"
 	MesCo2               = "co2"
 	MesPressure          = "pressure"
-
-	TagName           = "name"
-	TagId             = "id"
-	TagDeviceType     = "deviceType"
-	TagSegmentId      = "segment.id"
-	TagSegmentName    = "segment.name"
-	TagSegmentActive  = "segment.active"
-	TagSegmentStarted = "segment.started"
 )
 
 func readTestData(testdataFilename string) string {

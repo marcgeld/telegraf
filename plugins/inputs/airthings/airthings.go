@@ -41,6 +41,19 @@ const (
 	PathDevices        = "/devices"
 	PathLatestSamples  = "/devices/" + SerialNumber + "/latest-samples"
 	PathDevicesDetails = "/devices/" + SerialNumber
+	Id                 = "id"
+	DeviceType         = "deviceType"
+	Location           = "location"
+	Segment            = "segment"
+	Sensors            = "sensors"
+
+	TagName           = "name"
+	TagId             = Id
+	TagDeviceType     = DeviceType
+	TagSegmentId      = Segment + ".id"
+	TagSegmentName    = Segment + ".name"
+	TagSegmentActive  = Segment + ".active"
+	TagSegmentStarted = Segment + ".started"
 )
 
 var sampleConfig = `
@@ -126,16 +139,16 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 	}
 	for _, device := range deviceList.Devices {
 
-		var ts time.Time = time.Now()
+		var ts = time.Now()
 		var air = map[string]interface{}{}
 		var airTags = map[string]string{
-			"name":            "airthings",
-			"id":              device.Id,
-			"deviceType":      device.DeviceType,
-			"segment.id":      device.Segment.Id,
-			"segment.name":    device.Segment.Name,
-			"segment.active":  strconv.FormatBool(device.Segment.Active),
-			"segment.started": device.Segment.Started,
+			TagName:           "airthings",
+			TagId:             device.Id,
+			TagDeviceType:     device.DeviceType,
+			TagSegmentId:      device.Segment.Id,
+			TagSegmentName:    device.Segment.Name,
+			TagSegmentActive:  strconv.FormatBool(device.Segment.Active),
+			TagSegmentStarted: device.Segment.Started,
 		}
 
 		sample, err := m.devSample(device.Id)
@@ -159,11 +172,11 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 		}
 		for k, v := range *details {
 			switch k {
-			case "id":
-			case "deviceType":
-			case "location":
-			case "segment":
-			case "sensors":
+			case Id:
+			case DeviceType:
+			case Location:
+			case Segment:
+			case Sensors:
 			default:
 				air[k] = v
 			}
@@ -172,12 +185,7 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 		if len(air) == 0 {
 			air["battery"] = "N/A"
 		}
-		//fmt.Printf("--> air: %v\n", air)
-		//fmt.Printf("--> airTags: %v\n", airTags)
-		//fmt.Printf("--> time: %v\n\n", ts)
-
 		acc.AddFields("airthings_connector", air, airTags, ts)
-
 	}
 	return nil
 }
