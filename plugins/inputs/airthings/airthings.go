@@ -149,7 +149,7 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 				// Get the time of the sample
 				ts = time.Unix(int64(v.(float64)), 0)
 			default:
-				air["sample."+k] = v
+				air[k] = v
 			}
 		}
 
@@ -169,6 +169,9 @@ func (m *Airthings) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
+		if len(air) == 0 {
+			air["battery"] = "N/A"
+		}
 		//fmt.Printf("--> air: %v\n", air)
 		//fmt.Printf("--> airTags: %v\n", airTags)
 		//fmt.Printf("--> time: %v\n\n", ts)
